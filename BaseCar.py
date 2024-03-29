@@ -1,7 +1,7 @@
 import time
 from Motor import *
 import RPi.GPIO as GPIO
-from servo import Servo
+from servo import *
 from PCA9685 import PCA9685
 from Led import *
 from Buzzer import *
@@ -18,7 +18,10 @@ class BaseCar:
         self.echo_pin = 22
         self.MAX_DISTANCE = MAX_DISTANCE
         self.timeOut = self.MAX_DISTANCE * 60  # calculate timeout according to the maximum measuring distance
-        self.timeOut = TIME_OUT  # calculate timeout according to the maximum measuring distance
+        # self.timeOut = TIME_OUT  # calculate timeout according to the maximum measuring distance
+        
+        GPIO.setmode(GPIO.BCM) # ultrasonic
+
         GPIO.setup(self.trigger_pin, GPIO.OUT)
         GPIO.setup(self.echo_pin, GPIO.IN)
 
@@ -33,7 +36,7 @@ class BaseCar:
         self.IR01 = 14
         self.IR02 = 15
         self.IR03 = 23
-        GPIO.setmode(GPIO.BCM)
+        
         GPIO.setup(self.IR01,GPIO.IN)
         GPIO.setup(self.IR02,GPIO.IN)
         GPIO.setup(self.IR03,GPIO.IN)
