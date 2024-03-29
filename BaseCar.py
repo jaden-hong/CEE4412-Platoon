@@ -11,20 +11,23 @@ buzzer = Buzzer()
 #uses the git repository for base movement
 
 class BaseCar:
-    def __init__(self,MAX_DISTANCE = 30,TIME_OUT = 500):
+    def __init__(self,MAX_DISTANCE = 300,TIME_OUT = 500):
         #ultrasonic portion
         GPIO.setwarnings(False)
         self.trigger_pin = 27
         self.echo_pin = 22
+        self.MAX_DISTANCE = MAX_DISTANCE
         self.timeOut = self.MAX_DISTANCE * 60  # calculate timeout according to the maximum measuring distance
         self.timeOut = TIME_OUT  # calculate timeout according to the maximum measuring distance
+        GPIO.setup(self.trigger_pin, GPIO.OUT)
+        GPIO.setup(self.echo_pin, GPIO.IN)
+
 
         # setup for future functions
         self.PWM = Motor()
         self.LMR=0x00 #bite array for LMR data
         self.pwm_S = Servo()
-        GPIO.setup(self.trigger_pin, GPIO.OUT)
-        GPIO.setup(self.echo_pin, GPIO.IN)
+
 
         #line tracking portion of sensors
         self.IR01 = 14

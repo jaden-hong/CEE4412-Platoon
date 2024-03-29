@@ -5,6 +5,10 @@ class LeadCar(BaseCar):
         super(LeadCar,self).__init__()
 
     def LMRdecision(self,sf):
+        '''
+        function to take in the 
+        
+        '''
         print("")
         print("Driving, The lmr is:",self.LMR)
 
@@ -40,7 +44,7 @@ class LeadCar(BaseCar):
             #all sensors are detected: fork detected #or fork detected
             print("Intersection detected!")
 
-            ledBuzz(led,buzzer)
+            ledbuzz(led,buzzer)
             PWM.setMotorModel(0,0,0,0)
             time.sleep(1.0)
             self.intersectionProcedure()
@@ -52,10 +56,12 @@ class LeadCar(BaseCar):
         threshold = 15 #set to distance the how early to start lane procedure
         sf = 0.95 #the speed factor
         sleep = 0.3
-
+        counter = 0
         # flag = False
         while True:
-            print("NEXT ITERATION")
+            counter+=1
+            if counter%10==0:
+                print("NEXT ITERATION")
             # self.calculateLMR()
             
             frontDistance = self.get_distance()
