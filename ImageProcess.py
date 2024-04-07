@@ -30,9 +30,9 @@ class ImageProcess:
             emptyData = 0
             for car in self.carList:
                 # print(data)
-                data = car[0].recv(4096).decode('utf-16') #limit of 1024 bytes
-                text = str(data)
-                print(data,text)
+                data = car[0].recv(40960000)#.decode('utf-8') #limit of 1024 bytes
+                # text = str(data)
+                # print(data,text)
                 # text = str(data)
                 # print(data)
 
@@ -43,29 +43,64 @@ class ImageProcess:
                 #     print("from car:",car[1][0],"at port",car[1][1]," Data:",data)
                 # else:
                 if data:
-                    if text.startswith('SIZE'):
-                        tmp = text.split()
-                        size = int(tmp[1])
+                    # print(str(data.decode('utf-8')))
+                    print(len(data))
+                    
+                    try:
+                        text = str(data.decode('utf-8'))
+                        if text.startswith('SIZE'):
+                            tmp = str(data.decode('utf-8')).split()
+                            size = int(tmp[1])
 
-                        # print('GOT SIZE')
+                            #bruh why do we even need this
+                            print('GOT SIZE')
 
-                        car[0].send(("GOT SIZE").encode())
+                            car[0].send(("GOT SIZE").encode('utf-8'))
 
-                    elif text.startswith('BYE'):
-                        car[0].shutdown()
-
-                    else:
+                        elif text.startswith('BYE'):
+                            print("GOT BYE")
+                            emptyData+=1
+                            # car[0].shutdown(socket.SHUT_RDWR)
+                    except:
+                        print("no other option, recv. an image then")
                         myfile = open(imagePath, 'wb')
 
-                        data = car[0].recv(40960000).decode()
+                        # data = car[0].recv(409600000)#.decode('utf-8', 'ignore')
                         if not data:
+                            print("NO DATA")
                             myfile.close()
                             break
                         myfile.write(data)
                         myfile.close()
-
+                        print("SENDING : GOT IMAGE")
                         car[0].send(("GOT IMAGE").encode())
-                        # self.server_socket.shutdown()
+                        emptyData+=1
+                    # if str(data.decode('utf-8')).startswith('SIZE'):
+                    #     tmp = str(data.decode('utf-8')).split()
+                    #     size = int(tmp[1])
+
+                    #     print('GOT SIZE')
+
+                    #     car[0].send(("GOT SIZE").encode('utf-8'))
+
+                    # elif str(data.decode('utf-8')).startswith('BYE'):
+                    #     print("GOT BYE")
+                    #     emptyData+=1
+                    #     # car[0].shutdown(socket.SHUT_RDWR)
+
+                    # else:
+                    #     print("no other option, recv. an image then")
+                    #     myfile = open(imagePath, 'wb')
+
+                    #     data = car[0].recv(409600000)#.decode('utf-8', 'ignore')
+                    #     if not data:
+                    #         myfile.close()
+                    #         break
+                    #     myfile.write(data)
+                    #     myfile.close()
+
+                    #     car[0].send(("GOT IMAGE").encode())
+                    #     # self.server_socket.shutdown()
 
             if emptyData == len(self.carList):
                 break # no data is received
@@ -73,6 +108,7 @@ class ImageProcess:
         print("Finished!")
         for car in self.carList:
             car[0].close() #closing connection 
+            # car[0].shutdown(socket.SHUT_RDWR)
 
 
     # def sendMsg(self,message):

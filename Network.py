@@ -30,7 +30,7 @@ class NetworkModule:
         print("SIZE %s" % size)
 
         print("B4 sending")
-        self.client_socket.sendall(("SIZE %s" % size).encode()) #sending the size of the image
+        self.client_socket.sendall(("SIZE %s" % size).encode('utf-8')) #sending the size of the image
         print("Sent!")
 
         #received answer
@@ -38,15 +38,16 @@ class NetworkModule:
         answer  = self.client_socket.recv(4096).decode() #buffer size 4096
         
         print("answer = %s" % answer)
-        
+        # print(answer,answer=='GOT SIZE')
         if answer == 'GOT SIZE': #server received response
+            print("sending image")
             self.client_socket.sendall(bytes)
             
-            answer = self.client_socket.recv(4096).decode()
-            print("answer = %s"%answer)
+            # answer = self.client_socket.recv(4096).decode()
+            # print("answer = %s"%answer)
 
             if answer == "GOT IMAGE":
-                self.client_socket.sendall("BYE".encode())
+                self.client_socket.sendall("BYE".encode('utf-8'))
                 print("Image send successful")
 
         pass
