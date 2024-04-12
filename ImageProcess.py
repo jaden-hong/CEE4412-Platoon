@@ -20,7 +20,7 @@ class ImageProcess:
         # print(self.carList)
         #connecting to the cars
         
-
+    
 
     def run(self):
         imagePath = 'saved_frame1.jpg'
