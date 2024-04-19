@@ -29,8 +29,23 @@ class Processing:
         # print(self.carList)
         #connecting to the cars
 
-    def process(self):
-        self
+    def process(self,data,LMRdata,ultraData ):
+        '''
+        function that takes in the sensor data: image, LMRdata, ultrasonicData
+        '''
+        # with image : process into vector representation + object detection
+        # - if object detected too close (size of bounding box), stop vehicle until 
+        #   object has passed
+        # - objects will be pedestrians + stop signs
+        # 
+
+        # average out the points and determine the offset to left / right
+
+        # adjust wheel rotation to center car back into lane
+
+        pass
+        # decisions = (wheelSpeed, ledStatus, buzzerStatus)
+        #return decisions
 
     def communicate(self):
         '''
@@ -41,7 +56,7 @@ class Processing:
         maxDataLength = 100000
         while True:
             for car in self.carList:                
-                # accept incoming data from each lead car
+                # accept incoming data from each car in platoon
                 data = car[0].recv(maxDataLength) 
                 #
                 #data will be in either byte (for image) or string form
@@ -59,7 +74,7 @@ class Processing:
                             pass
 
                     except:
-                        # data is in bytes
+                        # data is in bytes, and data is the image
                         LMRdata = car[0].recv(4096) #other sensor data will be significantly less
                         ultraData = car[0].recv(4096)
 
@@ -69,7 +84,6 @@ class Processing:
                         #send processed data 
                         car[0].send(decision)
             #next iteration:
-
                 # send data back to each lead car
 
 if __name__ == "__main__":

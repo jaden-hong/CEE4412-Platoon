@@ -1,10 +1,14 @@
 from BaseCar import *
 #from Network import *
+from Communication import *
+from Network import NetworkModule
+from picamera2 import Picamera2
 
 
 class LeadCar(BaseCar):
-    def __init__(self):
-        super(LeadCar,self).__init__()
+    def __init__(self,host, port = 5000,):
+        super(LeadCar,self,).__init__()
+        self.network = NetworkModule(host,port)
 
     def LMRdecision(self,sf):
         '''
@@ -55,29 +59,58 @@ class LeadCar(BaseCar):
     def run(self):
         #set initial states
         self.pwm_S.setServoPwm('0',90) #starts looking straight first 
-        threshold = 15 #set to distance the how early to start lane procedure
+        threshold = 15 #set to distance to emergency stop
         sf = 0.95 #the speed factor
         sleep = 0.3
         counter = 0
         wait = 30
         # flag = False
         while True:
+
+            ##get sensor information:
+            frontDistance = self.get_distance()
+            picam2 = Picamera2()
+            picam2.start_and_capture_file("image.jpg")
+            image = picamera.image.get or smth
+            self.calculateLMR()
+            LMRdata = self.LMR
+
+            ## send data to host laptop:
+            # self.communications.send(image,LMRdata = self.LMR,ultraData = frontDistance)
+            self.network.sendData(image,LMRdata=self.LMR,ultraData=frontDistance)
+
+
+            ## receive message from host laptop
+            #
+            self.network.receiveInstruction()
+
+            ## send message to following cars
+            self.network.sendInstruction()
+
+            ## run cars 
+
             counter+=1
             if counter%wait==0:
                 print("NEXT ITERATION")
                 print("Front distance",frontDistance)
             # self.calculateLMR()
             
-            frontDistance = self.get_distance()
             
 
             #whenever the car is able to go and drive
-            if frontDistance>threshold:
+            if frontDistance>threshold: #for emergency braking
                 ledbuzz(led,buzzer,"drive")
-                # self.LMRdecision(sf)
+                
+                # based off decision tuple, update parameters of car:
+                #
+                #self.PWM.setMotorModel()
+                #ledbuzz(led,buzzer,status)
+
                 self.PWM.setMotorModel(1000,1000,1000,1000)
+
                 if counter%wait==0:
                     print("Car moving forwards")
+
             #when car should stop
             if frontDistance<=threshold:
                 # if flag==False:

@@ -1,4 +1,6 @@
 import time
+import socket
+
 from Motor import *
 import RPi.GPIO as GPIO
 from servo import *
@@ -11,7 +13,7 @@ buzzer = Buzzer()
 #uses the git repository for base movement
 
 class BaseCar:
-    def __init__(self,MAX_DISTANCE = 300,TIME_OUT = 500):
+    def __init__(self, MAX_DISTANCE = 300,TIME_OUT = 500):
         #ultrasonic portion
         GPIO.setwarnings(False)
         self.trigger_pin = 27
@@ -24,7 +26,6 @@ class BaseCar:
 
         GPIO.setup(self.trigger_pin, GPIO.OUT)
         GPIO.setup(self.echo_pin, GPIO.IN)
-
 
         # setup for future functions
         self.PWM = Motor()
@@ -40,6 +41,20 @@ class BaseCar:
         GPIO.setup(self.IR01,GPIO.IN)
         GPIO.setup(self.IR02,GPIO.IN)
         GPIO.setup(self.IR03,GPIO.IN)
+
+        # setup for networking
+
+        # #set self.host to be the hostname of the host laptop
+        # self.host = host
+        # self.port = port
+        # self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # #connecting to host @ port
+        # self.client_socket.connect((host,port))
+        # self.car_name = socket.gethostname()
+        # print("Successfully connected to host laptop:",host)
+
+
 
     def pulseIn(self, pin, level, timeOut):  # obtain pulse time of a pin under timeOut
         t0 = time.time()

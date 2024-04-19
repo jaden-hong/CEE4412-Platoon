@@ -12,7 +12,7 @@ class NetworkModule:
         self.car_name = socket.gethostname()
         print("Successfully connected to host")
 
-    def sendImage(self,path):
+    def sendData(self,path,image,LMRdata,ultraData):
         '''
         for the lead car to send data
 
