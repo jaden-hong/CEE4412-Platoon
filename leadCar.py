@@ -1,8 +1,7 @@
 from BaseCar import *
 #from Network import *
 from Communication import *
-from Network import NetworkModule
-from picamera2 import Picamera2
+from Network import *
 
 
 class LeadCar(BaseCar):
@@ -71,7 +70,6 @@ class LeadCar(BaseCar):
             frontDistance = self.get_distance()
             picam2 = Picamera2()
             picam2.start_and_capture_file("image.jpg")
-            image = picamera.image.get or smth
             self.calculateLMR()
             LMRdata = self.LMR
 

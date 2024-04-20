@@ -6,6 +6,7 @@ class ImageProcess:
         print("Staring host at",self.host)
         self.port = port
 
+
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #create new socket
         self.server_socket.bind((self.host,self.port))
     
