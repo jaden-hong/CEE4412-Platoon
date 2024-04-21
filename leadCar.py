@@ -1,13 +1,13 @@
 from BaseCar import *
-#from Network import *
-from Communication import *
-from Network import *
+from Network import LeadModule
+# from sharedQueue import sQueue #squeue used to access instructions
 
+#edit laptop_hostname to be name of host laptop (leadLaptop.py
 
 class LeadCar(BaseCar):
-    def __init__(self,host, port = 5000,):
+    def __init__(self,laptop_hostname, port = 5000,):
         super(LeadCar,self,).__init__()
-        self.network = NetworkModule(host,port)
+        self.network = LeadModule(laptop_hostname,port)
 
     def LMRdecision(self,sf):
         '''
@@ -239,10 +239,12 @@ class LeadCar(BaseCar):
         time.sleep(manueverTime)
         return True
 '''
-car = LeadCar()
+
 # Main program logic follows:
 if __name__ == '__main__':
     print ('Program is starting ... ')
+    laptop_hostname = "JADENPC_2024"
+    car = LeadCar(laptop_hostname)
     try:
         car.run()
     except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the child program  will be  executed.

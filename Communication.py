@@ -12,7 +12,7 @@ class Processing:
     '''
     def __init__(self,port = 5000, totalCars = 1):
         self.host = socket.gethostname()
-        print("Staring host at",self.host)
+        print("Staring laptop host at",self.host)
         self.port = port
 
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #create new socket

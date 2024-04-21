@@ -1,8 +1,12 @@
 from BaseCar import *
+from Network import FollowModule
+# from sharedQueue import sQueue
 
-class LeadCar(BaseCar):
-    def __init__(self):
-        super(LeadCar,self).__init__()
+class FollowCar(BaseCar):
+    def __init__(self,laptop_hostname, port = 5000,):
+        super(FollowCar,self).__init__()
+        self.network = FollowModule(laptop_hostname,port)
+
 
     def LMRdecision(self,sf):
         '''

@@ -3,6 +3,8 @@ import time
 import threading
 import queue
 
+from sharedQueue import sQueue
+
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
 from picamera2.outputs import FileOutput
@@ -16,8 +18,8 @@ FollowModule is a class to communicate between follow to Lead Module
 class LeadModule:
     def __init__(self,laptop_hostname,connList,port=5000):
         ## socket for communicating with laptop
-        self.laptop_hostname = laptop_hostname # host is the lead car 
-        self.host = socket.gethostname()
+        self.laptop_hostname = laptop_hostname #
+        self.host = socket.gethostname() # host is the lead car 
         self.connList = connList #need to put in the ip addresses of: [laptop,lead1,fol1,fol2,..]
         self.conn_list = [None]
         self.port=port
@@ -44,6 +46,7 @@ class LeadModule:
         '''
         ## to initialize connection
         if connected==False: #only for the first lead car
+            self.lead_socket.listen(1)
             conn, addr = self.lead_socket.accept(1) #will accept 1 connection
             self.conn_list[idx] = (conn,addr)
 
@@ -67,15 +70,6 @@ class LeadModule:
             #* need to design the validation process
             #- if lead car pwm motor data does not match: need to do something LOL
             #if the ultrasonic data is 
-
-    def fol_process(self,conn = True):
-        '''
-        the process + protocols of follow car to lead socket(s)
-        '''
-        if conn:
-            pass
-
-        pass
     
     def lead_laptop_process(self,idx=0,end=False,connected = True,szTuple = (1280,720),port=5000):
         '''
@@ -114,7 +108,7 @@ class LeadModule:
             movement = str(data.decode('utf-8')) 
             for i in range(self.conn_list-2): #minus two accounting for laptop + lead
                 self.queue.put(movement) #putting in queue so threads at idx 2+ can access, as each get removes from queue
-            
+            sQueue.put(movement)
             # movementData #will be tuple of pwm motors, led and buzzer    
             #need to take this data and pass to the main
 
@@ -207,7 +201,33 @@ class LeadModule:
         '''
         
 
-# class FollowModule(self)
+class FollowModule:
+    def __init__(self,lead_hostname,port=5000):
+        self.lead_hostname = lead_hostname
+        self.host = socket.gethostname()
+
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #create new socket
+        self.socket.bind((self.host,self.port))
+
+
+
+    def fol_process(self,currentMove,connected = False, end = False, changeMove = False):
+        '''
+        the process + protocols of follow car to lead socket(s)
+        '''
+        ## to initialize connection
+        if connected==False: #only for the first lead car
+            self.socket.listen(1)
+            conn, addr = self.socket.accept(1) #will accept 1 connection
+
+        if end:
+            self.socket.close()
+        
+        movement = self.socket.recvall()
+        if changeMove: #if the follow car deviates from what instructions are given
+            self.socket.send(currentMove) 
+        else:
+            sQueue.put(movement) #continue transmitting instructions
 
 
 if __name__ =='__main__':
