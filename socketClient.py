@@ -8,7 +8,7 @@ def client_program():
     # clientPort = 5001
 
     serverPort = 5000  # socket server port number
-    serverHost = r"JADENPC_2024" #name of the server host (from print(socket.gethostname()))
+    serverHost = r"ASUS-ROG-Strix-G15" #name of the server host (from print(socket.gethostname()))
     
     # client_socket = socket.socket((clientHost,clientPort))  # instantiate
     client_socket = socket.socket()

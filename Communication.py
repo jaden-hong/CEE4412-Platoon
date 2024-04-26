@@ -21,11 +21,14 @@ class Processing:
         numCars = 0
         self.carList = []
         self.server_socket.listen(totalCars)
+        print("Accepting cars")
         while numCars < totalCars: #until all cars are connected
             
             conn, addr = self.server_socket.accept()
             self.carList.append([conn,addr])
             numCars+=1
+
+        print("Succesfully connected")
         # print(self.carList)
         #connecting to the cars
 

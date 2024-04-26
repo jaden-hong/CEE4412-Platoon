@@ -135,7 +135,7 @@ class ProcessCar(BaseCar):
 
             #feedback for current state
 
-    def getVector():
+    # def getVector():
         
 
 car = ProcessCar()

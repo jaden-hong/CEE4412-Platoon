@@ -23,10 +23,9 @@ class Processing:
 
         print("Listening for lead car")
         self.laptop_socket.listen()
+        print("x")
         self.conn, self.addr = self.laptop_socket.accept()
         print("Succesfully connected to lead car")
-
-
         self.video_decoder = cv2.VideoCapture()
 
     def process(self,data):

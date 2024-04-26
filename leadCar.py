@@ -1,6 +1,6 @@
 from BaseCar import *
 from Network import LeadModule
-# from sharedQueue import sQueue #squeue used to access instructions
+from sharedQueue import sQueue #squeue used to access instructions
 
 #edit laptop_hostname to be name of host laptop (leadLaptop.py
 
@@ -68,22 +68,26 @@ class LeadCar(BaseCar):
 
             ##get sensor information:
             frontDistance = self.get_distance()
-            picam2 = Picamera2()
-            picam2.start_and_capture_file("image.jpg")
+            # picam2 = Picamera2()
+            # picam2.start_and_capture_file("image.jpg")
             self.calculateLMR()
             LMRdata = self.LMR
 
             ## send data to host laptop:
             # self.communications.send(image,LMRdata = self.LMR,ultraData = frontDistance)
-            self.network.sendData(image,LMRdata=self.LMR,ultraData=frontDistance)
+            if counter==0:
+                self.network.lead_laptop_process(connected=False)
+            else:
+                self.network.lead_laptop_process()
 
 
             ## receive message from host laptop
             #
-            self.network.receiveInstruction()
+            # self.network.receiveInstruction()
+            movement = sQueue.get()
 
             ## send message to following cars
-            self.network.sendInstruction()
+            # self.network.sendInstruction()
 
             ## run cars 
 
@@ -103,9 +107,10 @@ class LeadCar(BaseCar):
                 #
                 #self.PWM.setMotorModel()
                 #ledbuzz(led,buzzer,status)
-
+                print(movement)
                 self.PWM.setMotorModel(1000,1000,1000,1000)
 
+                # self.PWM.
                 if counter%wait==0:
                     print("Car moving forwards")
 
@@ -243,7 +248,7 @@ class LeadCar(BaseCar):
 # Main program logic follows:
 if __name__ == '__main__':
     print ('Program is starting ... ')
-    laptop_hostname = "JADENPC_2024"
+    laptop_hostname = r"LAPTOP-2JG6DRO3"
     car = LeadCar(laptop_hostname)
     try:
         car.run()

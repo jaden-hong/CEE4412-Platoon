@@ -80,10 +80,23 @@ class LeadModule:
         
         if connected == False: #first time set up
             #setting up socket
-            self.laptop_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.laptop_socket.bind((self.host,self.port))
+            self.laptop_socket = socket.socket() #socket.AF_INET, socket.SOCK_STREAM
+            # self.laptop_socket.bind((self.host,self.port))
             #connecting to laptop @ port
-            self.laptop_socket.connect((self.laptop_host,port)) #default port 5000
+            print(self.laptop_hostname,self.port)
+            self.laptop_socket.connect((self.laptop_hostname,self.port)) #default port 5000
+
+            # try:
+            #     self.laptop_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            #     # self.laptop_socket.bind((self.host,self.port))
+            #     self.laptop_socket.connect((self.laptop_hostname, port))
+            #     print("Connected successfully!")
+            # except socket.gaioerror as e:
+            #     print(f"Error connecting to socket: {e}")
+            # except OSError as e:
+            #     print(f"OSError occurred: {e}")
+
+    
 
             print("Successfully connected",self.host,"to laptop",self.laptop_host)
 
