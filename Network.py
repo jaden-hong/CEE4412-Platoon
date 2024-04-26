@@ -23,11 +23,18 @@ class LeadModule:
         self.connList = connList #need to put in the ip addresses of: [laptop,lead1,fol1,fol2,..]
         self.conn_list = [None]
         self.port=port
-
+        
         self.queue = queue.Queue()
 
         self.lead_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.lead_socket.bind((self.host,self.port+1))
+        self.lead_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        try:
+            self.lead_socket.bind((self.host,self.port+1))
+        except:
+            self.lead_socket.close()
+            self.lead_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.lead_socket.bind((self.host,self.port+1))
 
         #connList is list of all devices to be connected with details in order of:
         # [laptop.devicename,lead1.devicename,follow1.devicename,follow2.devicename,...]
@@ -98,7 +105,7 @@ class LeadModule:
 
     
 
-            print("Successfully connected",self.host,"to laptop",self.laptop_host)
+            print("Successfully connected",self.host,"to laptop",self.laptop_hostname)
 
             #setting up streaming + camera
             picam2 = Picamera2()
@@ -109,21 +116,43 @@ class LeadModule:
             # self.laptop_sock.connect((self.laptop_hostname, 10001))
             stream = self.laptop_socket.makefile("wb")
             picam2.start_recording(encoder, FileOutput(stream))
-        
+            print("starting video stream")
+            time.sleep(1)
+            picam2.stop_recording()
+            print('stopping vid stream')
 
-        if end: #ending loop
+            print("Waiting on data")
+            data = self.laptop_socket.recv(409600)
+            print("Data received")
+            if data: #message received: will be in format of tuple of the sensor data
+                movement = str(data.decode('utf-8')) 
+                print(movement)
+                for i in range(self.conn_list-2): #minus two accounting for laptop + lead
+                    self.queue.put(movement) #putting in queue so threads at idx 2+ can access, as each get removes from queue
+                sQueue.put(movement)
+                # movementData #will be tuple of pwm motors, led and buzzer    
+                #need to take this data and pass to the main
+            else:
+                print("no data!!!!")
+
+        elif end: #ending loop
             picam2.stop_recording()
             self.laptop_socket.close()
-        
+            print("ending loop")
         #receiving data:
-        data = self.connList[idx][0].recvall()
-        if data: #message received: will be in format of tuple of the sensor data
-            movement = str(data.decode('utf-8')) 
-            for i in range(self.conn_list-2): #minus two accounting for laptop + lead
-                self.queue.put(movement) #putting in queue so threads at idx 2+ can access, as each get removes from queue
-            sQueue.put(movement)
-            # movementData #will be tuple of pwm motors, led and buzzer    
-            #need to take this data and pass to the main
+
+        else:
+            pass
+            # print("Waiting on data")
+            # data = self.laptop_socket.recv(409600)
+            # print("Data received")
+            # if data: #message received: will be in format of tuple of the sensor data
+            #     movement = str(data.decode('utf-8')) 
+            #     for i in range(self.conn_list-2): #minus two accounting for laptop + lead
+            #         self.queue.put(movement) #putting in queue so threads at idx 2+ can access, as each get removes from queue
+            #     sQueue.put(movement)
+            #     # movementData #will be tuple of pwm motors, led and buzzer    
+            #     #need to take this data and pass to the main
 
     def connect(self):
         '''
@@ -236,7 +265,7 @@ class FollowModule:
         if end:
             self.socket.close()
         
-        movement = self.socket.recvall()
+        movement = self.socket.recv(4096000)
         if changeMove: #if the follow car deviates from what instructions are given
             self.socket.send(currentMove) 
         else:

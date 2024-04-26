@@ -8,6 +8,43 @@ class LeadCar(BaseCar):
     def __init__(self,laptop_hostname, port = 5000,):
         super(LeadCar,self,).__init__()
         self.network = LeadModule(laptop_hostname,port)
+        
+
+    def lead_fol_process(self,idx,connected = True,end = False):
+        '''
+        the process + protocols of lead car to follow car socket(s)
+        idx is thread index
+        movement = tuple of movement commands (pwm, led, buzzer)
+        connect is whether or not its connected
+        end is to break loop
+        '''
+        ## to initialize connection
+        if connected==False: #only for the first lead car
+            self.lead_socket.listen(1)
+            conn, addr = self.lead_socket.accept(1) #will accept 1 connection
+            self.conn_list[idx] = (conn,addr)
+
+        if end:
+            self.lead_socket.close()
+
+        #* regular processes *#
+        # - needs to accept and send messages back and forth
+        #get movement data
+
+        movement = self.queue.get() #each thread will receive a movement string
+        # movement = movement.decode('utf-8')
+
+        self.conn_list[idx][0].send(movement)        
+
+
+        data = self.connList[idx][0].recvall()
+        if data: #message received: will be in format of tuple of the sensor data
+            sensorData = str(data.decode('utf-8'))
+            # self.queue.put()
+            #* need to design the validation process
+            #- if lead car pwm motor data does not match: need to do something LOL
+            #if the ultrasonic data is 
+
 
     def LMRdecision(self,sf):
         '''
@@ -64,8 +101,10 @@ class LeadCar(BaseCar):
         counter = 0
         wait = 30
         # flag = False
-        while True:
 
+        
+        while True:
+            print("counter",counter)
             ##get sensor information:
             frontDistance = self.get_distance()
             # picam2 = Picamera2()
@@ -78,12 +117,13 @@ class LeadCar(BaseCar):
             if counter==0:
                 self.network.lead_laptop_process(connected=False)
             else:
-                self.network.lead_laptop_process()
+                self.network.lead_laptop_process(connected=False)
 
 
             ## receive message from host laptop
             #
             # self.network.receiveInstruction()
+            print("getting movement")
             movement = sQueue.get()
 
             ## send message to following cars
@@ -98,7 +138,7 @@ class LeadCar(BaseCar):
             # self.calculateLMR()
             
             
-
+            print('car decision making')
             #whenever the car is able to go and drive
             if frontDistance>threshold: #for emergency braking
                 ledbuzz(led,buzzer,"drive")
@@ -248,10 +288,12 @@ class LeadCar(BaseCar):
 # Main program logic follows:
 if __name__ == '__main__':
     print ('Program is starting ... ')
-    laptop_hostname = r"LAPTOP-2JG6DRO3"
+    # laptop_hostname = r"LAPTOP-2JG6DRO3"
+    laptop_hostname = r"JADENPC_2024"
     car = LeadCar(laptop_hostname)
     try:
         car.run()
     except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the child program  will be  executed.
         PWM.setMotorModel(0,0,0,0)
         ledbuzz(led,buzzer,'end')
+        print("issue! stopping")
