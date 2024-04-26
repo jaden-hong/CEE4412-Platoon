@@ -75,10 +75,10 @@ def region_selection_road(image):
 	# we have created this polygon in accordance to how the camera was placed
  
 	rows, cols = image.shape[:2]
-	bottom_left = [cols * 0.02, rows * 0.95]
-	top_left	 = [cols * 0.3, rows * 0.55]
-	bottom_right = [cols * 0.98, rows * 0.95]
-	top_right = [cols * 0.7, rows * 0.55]
+	bottom_left = [cols * 0.02, rows * 0.65]
+	top_left	 = [cols * 0.02, rows * 0.95]
+	bottom_right = [cols * 0.99, rows * 0.65]
+	top_right = [cols * 0.99, rows * 0.95]
  
  
 	vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
@@ -95,8 +95,10 @@ def process_image_and_get_offset(image):
     # Apply Gaussian blur to remove noise from the frames
     blur = cv2.GaussianBlur(grayscale, (5, 5), 0)
     
+    mask = region_selection_road(blur)
+    
     # Thresholding to ignore dark colors
-    _, thresholded = cv2.threshold(blur, 150, 255, cv2.THRESH_BINARY)
+    _, thresholded = cv2.threshold(mask, 150, 255, cv2.THRESH_BINARY)
 
     # Canny edge detection
     edges = cv2.Canny(thresholded, 100, 200) 

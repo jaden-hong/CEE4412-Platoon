@@ -170,8 +170,10 @@ def frame_processor(image):
     # Apply Gaussian blur to remove noise from the frames
     blur = cv2.GaussianBlur(grayscale, (5, 5), 0)
     
+    mask = region_selection_road(blur)
+    
     # Thresholding to ignore dark colors
-    _, thresholded = cv2.threshold(blur, 150, 255, cv2.THRESH_BINARY)
+    _, thresholded = cv2.threshold(mask, 150, 255, cv2.THRESH_BINARY)
 
     # Canny edge detection
     edges = cv2.Canny(thresholded, 100, 200) 
