@@ -89,13 +89,30 @@ def region_selection_road(image):
 	return masked_image
 
 def process_image_and_get_offset(image):
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_green = np.array([40, 40, 40])
-    upper_green = np.array([70, 255, 255])
-    mask = cv2.inRange(hsv, lower_green, upper_green)
-    mask = region_selection_road(mask)
-    edges = cv2.Canny(mask, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=150)
+    # Convert the RGB image to grayscale
+    grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # Apply Gaussian blur to remove noise from the frames
+    blur = cv2.GaussianBlur(grayscale, (5, 5), 0)
+    
+    # Thresholding to ignore dark colors
+    _, thresholded = cv2.threshold(blur, 150, 255, cv2.THRESH_BINARY)
+
+    # Canny edge detection
+    edges = cv2.Canny(thresholded, 100, 200) 
+    
+    # Region selection mask
+    mask = np.zeros_like(edges)
+    ignore_mask_color = 255
+    imshape = image.shape
+    vertices = np.array([[(0, imshape[0]), (imshape[1] / 2, imshape[0] / 2), (imshape[1], imshape[0])]], dtype=np.int32)
+    cv2.fillPoly(mask, vertices, ignore_mask_color)
+    masked_edges = cv2.bitwise_and(edges, mask)
+    
+    # Hough transform to detect lines
+    lines = cv2.HoughLinesP(masked_edges, 2, np.pi/180, 15, np.array([]), minLineLength=5, maxLineGap=20)
+    
+    
     if lines is None:
         return None 
 
@@ -122,6 +139,8 @@ def process_image_and_get_offset(image):
     right_x1 = int((y1 - right_avg[1]) / right_avg[0])
     lane_center_x = (left_x1 + right_x1) / 2
     image_center_x = middle_x
+    
+    
     return int(lane_center_x - image_center_x)
 
 def main_loop():
