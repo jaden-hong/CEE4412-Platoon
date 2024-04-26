@@ -54,11 +54,46 @@ def capture():
     finally:
         picam2.stop()
 
+def region_selection_road(image):
+	"""
+	Determine and cut the region of interest in the input image.
+	Parameters:
+		image: we pass here the output from canny where we have 
+		identified edges in the frame
+	"""
+	# create an array of the same size as of the input image 
+	mask = np.zeros_like(image) 
+	# if you pass an image with more then one channel
+	if len(image.shape) > 2:
+		channel_count = image.shape[2]
+		ignore_mask_color = (255,) * channel_count
+	# our image only has one channel so it will go under "else"
+	else:
+		# color of the mask polygon (white)
+		ignore_mask_color = 255
+	# creating a polygon to focus only on the road in the picture
+	# we have created this polygon in accordance to how the camera was placed
+ 
+	rows, cols = image.shape[:2]
+	bottom_left = [cols * 0.02, rows * 0.95]
+	top_left	 = [cols * 0.3, rows * 0.55]
+	bottom_right = [cols * 0.98, rows * 0.95]
+	top_right = [cols * 0.7, rows * 0.55]
+ 
+ 
+	vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
+	# filling the polygon with white color and generating the final mask
+	cv2.fillPoly(mask, vertices, ignore_mask_color)
+	# performing Bitwise AND on the input image and mask to get only the edges on the road
+	masked_image = cv2.bitwise_and(image, mask)
+	return masked_image
+
 def process_image_and_get_offset(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_green = np.array([40, 40, 40])
     upper_green = np.array([70, 255, 255])
     mask = cv2.inRange(hsv, lower_green, upper_green)
+    mask = region_selection_road(mask)
     edges = cv2.Canny(mask, 50, 150)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=150)
     if lines is None:
