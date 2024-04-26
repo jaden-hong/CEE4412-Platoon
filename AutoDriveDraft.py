@@ -153,32 +153,28 @@ def main_loop():
             offset = process_image_and_get_offset(image)
             print("Offset:", offset)
 
-            if offset is not None:
+            # Loop until the car is centered again between the desired offset bounds
+            while offset is not None and (offset > 350 or offset < -350):
                 if offset > 350:
                     print('Turning right')
-                    while offset > 350:
-                        motor.set_motor_model(2000, 2000, -1500, -1500)  # Turn right
-                        image = capture()
-                        offset = process_image_and_get_offset(image)
-                        print("Offset:", offset)
-                        time.sleep(0.25)
+                    motor.set_motor_model(2000, 2000, -1000, -1000)  # Turn right
 
                 elif offset < -350:
                     print('Turning left')
-                    while offset < -350:
-                        motor.set_motor_model(-1500, -1500, 2000, 2000)  # Turn left
-                        image = capture()
-                        offset = process_image_and_get_offset(image)
-                        print("Offset:", offset)
-                        time.sleep(0.25)
+                    motor.set_motor_model(-1000, -1000, 2000, 2000)  # Turn left
+
                 else:
                     print('Moving forward')
-                    motor.set_motor_model(500, 500, 500, 500)
-            else:
-                print('No lane detected, stopping')
-                motor.set_motor_model(0, 0, 0, 0)
+                    motor.set_motor_model(500, 500, 500, 500)  # Proceed forward after adjustment
 
-            time.sleep(0.5)  # You may adjust this delay as needed
+                time.sleep(0.25)  # Short delay to allow the vehicle to adjust before rechecking
+                image = capture()
+                offset = process_image_and_get_offset(image)
+                print("Adjusted Offset:", offset)
+
+            print('Moving forward')
+            motor.set_motor_model(500, 500, 500, 500)  # Proceed forward after adjustment
+            time.sleep(0.25)  # You may adjust this delay as needed
 
     except KeyboardInterrupt:
         motor.set_motor_model(0, 0, 0, 0)
