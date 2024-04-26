@@ -10,148 +10,61 @@ class Motor:
     def __init__(self):
         self.pwm = PCA9685(0x40, debug=True)
         self.pwm.setPWMFreq(50)
-        self.time_proportion = 2.5 
+        self.time_proportion = 2.5
         self.adc = Adc()
 
-    @staticmethod
-    def duty_range(duty1, duty2, duty3, duty4):
-        if duty1 > 4095:
-            duty1 = 4095
-        elif duty1 < -4095:
-            duty1 = -4095
+    def duty_range(self, duty1, duty2, duty3, duty4):
+        duties = [duty1, duty2, duty3, duty4]
+        return [max(min(d, 4095), -4095) for d in duties]
 
-        if duty2 > 4095:
-            duty2 = 4095
-        elif duty2 < -4095:
-            duty2 = -4095
+    def set_motor_model(self, duty1, duty2, duty3, duty4):
+        duties = self.duty_range(duty1, duty2, duty3, duty4)
+        self.left_upper_wheel(duties[0])
+        self.left_lower_wheel(duties[1])
+        self.right_upper_wheel(duties[2])
+        self.right_lower_wheel(duties[3])
 
-        if duty3 > 4095:
-            duty3 = 4095
-        elif duty3 < -4095:
-            duty3 = -4095
+    def left_upper_wheel(self, duty):
+        self.pwm.setMotorPwm(1, max(0, duty))
+        self.pwm.setMotorPwm(0, max(0, -duty))
 
-        if duty4 > 4095:
-            duty4 = 4095
-        elif duty4 < -4095:
-            duty4 = -4095
-        return duty1, duty2, duty3, duty4
+    def left_lower_wheel(self, duty):
+        self.pwm.setMotorPwm(2, max(0, duty))
+        self.pwm.setMotorPwm(3, max(0, -duty))
 
-    def left_Upper_Wheel(self, duty):
-        if duty > 0:
-            self.pwm.setMotorPwm(0, 0)
-            self.pwm.setMotorPwm(1, duty)
-        elif duty < 0:
-            self.pwm.setMotorPwm(1, 0)
-            self.pwm.setMotorPwm(0, abs(duty))
-        else:
-            self.pwm.setMotorPwm(0, 4095)
-            self.pwm.setMotorPwm(1, 4095)
+    def right_upper_wheel(self, duty):
+        self.pwm.setMotorPwm(7, max(0, duty))
+        self.pwm.setMotorPwm(6, max(0, -duty))
 
-    def left_Lower_Wheel(self, duty):
-        if duty > 0:
-            self.pwm.setMotorPwm(3, 0)
-            self.pwm.setMotorPwm(2, duty)
-        elif duty < 0:
-            self.pwm.setMotorPwm(2, 0)
-            self.pwm.setMotorPwm(3, abs(duty))
-        else:
-            self.pwm.setMotorPwm(2, 4095)
-            self.pwm.setMotorPwm(3, 4095)
+    def right_lower_wheel(self, duty):
+        self.pwm.setMotorPwm(5, max(0, duty))
+        self.pwm.setMotorPwm(4, max(0, -duty))
 
-    def right_Upper_Wheel(self, duty):
-        if duty > 0:
-            self.pwm.setMotorPwm(6, 0)
-            self.pwm.setMotorPwm(7, duty)
-        elif duty < 0:
-            self.pwm.setMotorPwm(7, 0)
-            self.pwm.setMotorPwm(6, abs(duty))
-        else:
-            self.pwm.setMotorPwm(6, 4095)
-            self.pwm.setMotorPwm(7, 4095)
-
-    def right_Lower_Wheel(self, duty):
-        if duty > 0:
-            self.pwm.setMotorPwm(4, 0)
-            self.pwm.setMotorPwm(5, duty)
-        elif duty < 0:
-            self.pwm.setMotorPwm(5, 0)
-            self.pwm.setMotorPwm(4, abs(duty))
-        else:
-            self.pwm.setMotorPwm(4, 4095)
-            self.pwm.setMotorPwm(5, 4095)
-
-    def setMotorModel(self, duty1, duty2, duty3, duty4):
-        duty1, duty2, duty3, duty4 = self.duty_range(duty1, duty2, duty3, duty4)
-        self.left_Upper_Wheel(duty1)
-        self.left_Lower_Wheel(duty2)
-        self.right_Upper_Wheel(duty3)
-        self.right_Lower_Wheel(duty4)
-
-    def Rotate(self, n):
-        angle = n
-        bat_compensate = 7.5 / (self.adc.recvADC(2) * 3)
-        while True:
-            W = 2000
-
-            VY = int(2000 * math.cos(math.radians(angle)))
-            VX = -int(2000 * math.sin(math.radians(angle)))
-
-            FR = VY - VX + W
-            FL = VY + VX - W
-            BL = VY - VX - W
-            BR = VY + VX + W
-
-            PWM.setMotorModel(FL, BL, FR, BR)
-            print("rotating")
-            time.sleep(5 * self.time_proportion * bat_compensate / 1000)
-            angle -= 5
-
-PWM = Motor()
-picam2 = Picamera2()
+picam2 = Picamera2()  # Create a single camera instance outside the function
+config = picam2.create_still_configuration(main={"size": (640, 480)})
+picam2.configure(config)
 
 def capture():
-    picam2.start_preview()
-    time.sleep(2)
-
-    config = picam2.create_still_configuration(main={"size": (640, 480)})
-    picam2.configure(config)
-    picam2.start()
-    buffer = picam2.capture_array("main") 
-    picam2.stop()
-
-    image = cv2.cvtColor(buffer, cv2.COLOR_RGB2BGR)
-
-    return image
-
-def setMotorModel(self, duty1, duty2, duty3, duty4):
-        duty1, duty2, duty3, duty4 = self.duty_range(duty1, duty2, duty3, duty4)
-        self.PWM.left_Upper_Wheel(-duty1)
-        self.PWM.left_Lower_Wheel(-duty2)
-        self.PWM.right_Upper_Wheel(-duty3)
-        self.PWM.right_Lower_Wheel(-duty4)
-
-def forward():
-    PWM.setMotorModel(1000,1000,1000,1000)
-
-def left():
-    PWM.setMotorModel(-1500, -1500, 2000, 2000)
-
-def right():
-    PWM.setMotorModel(2000, 2000, -1500, -1500)
+    try:
+        picam2.start()
+        # Give the camera a warm-up time
+        time.sleep(0.25)
+        buffer = picam2.capture_array("main")
+        return cv2.cvtColor(buffer, cv2.COLOR_RGB2BGR)
+    finally:
+        picam2.stop()
 
 def process_image_and_get_offset(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_green = np.array([40, 40, 40])
     upper_green = np.array([70, 255, 255])
     mask = cv2.inRange(hsv, lower_green, upper_green)
-
     edges = cv2.Canny(mask, 50, 150)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=150)
     if lines is None:
         return None 
 
-    left_lines = []
-    right_lines = []
+    left_lines, right_lines = [], []
     middle_x = image.shape[1] / 2
     for line in lines:
         for x1, y1, x2, y2 in line:
@@ -162,7 +75,7 @@ def process_image_and_get_offset(image):
                 left_lines.append((slope, intercept))
             elif slope > 0 and x1 > middle_x and x2 > middle_x:
                 right_lines.append((slope, intercept))
-    
+
     if not left_lines or not right_lines:
         return None 
 
@@ -173,38 +86,47 @@ def process_image_and_get_offset(image):
     left_x1 = int((y1 - left_avg[1]) / left_avg[0])
     right_x1 = int((y1 - right_avg[1]) / right_avg[0])
     lane_center_x = (left_x1 + right_x1) / 2
-
     image_center_x = middle_x
-    offset = int(lane_center_x - image_center_x)
-
-    return offset if left_lines and right_lines else None
+    return int(lane_center_x - image_center_x)
 
 def main_loop():
+    motor = Motor()
     try:
         while True:
-            # take image
             image = capture()
-
-            # process image for offset
             offset = process_image_and_get_offset(image)
-            print(offset)
-            
-            # turn right/left depending on offset
-            if offset is not None:
-                if offset > 50:
-                    right()
-                elif offset < -50:
-                    left()
-                else:
-                    forward()
-            else:
-                forward() 
+            print("Offset:", offset)
 
-            time.sleep(1)
+            if offset is not None:
+                if offset > 350:
+                    print('Turning right')
+                    while offset > 350:
+                        motor.set_motor_model(2000, 2000, -1500, -1500)  # Turn right
+                        image = capture()
+                        offset = process_image_and_get_offset(image)
+                        print("Offset:", offset)
+                        time.sleep(0.25)
+
+                elif offset < -350:
+                    print('Turning left')
+                    while offset < -350:
+                        motor.set_motor_model(-1500, -1500, 2000, 2000)  # Turn left
+                        image = capture()
+                        offset = process_image_and_get_offset(image)
+                        print("Offset:", offset)
+                        time.sleep(0.25)
+                else:
+                    print('Moving forward')
+                    motor.set_motor_model(500, 500, 500, 500)
+            else:
+                print('No lane detected, stopping')
+                motor.set_motor_model(0, 0, 0, 0)
+
+            time.sleep(0.5)  # You may adjust this delay as needed
 
     except KeyboardInterrupt:
-        setMotorModel(0, 0, 0, 0)
-        print('stop')
+        motor.set_motor_model(0, 0, 0, 0)
+        print('Stopped by User')
 
 if __name__ == "__main__":
     main_loop()
