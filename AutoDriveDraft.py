@@ -145,6 +145,31 @@ def process_image_and_get_offset(image):
     
     return int(lane_center_x - image_center_x)
 
+def detect_stop_signs(img):
+    """
+    Detects stop signs in the input image.
+    
+    Parameters:
+        img: Input image in BGR format.
+        
+    Returns:
+        found_signs: Boolean indicating whether stop signs are detected or not.
+    """
+    # Convert image to grayscale
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # Load stop sign classifier
+    stop_data = cv2.CascadeClassifier('stop_data.xml')
+
+    # Detect stop signs
+    found = stop_data.detectMultiScale(img_gray, minSize=(20, 20))
+
+    # Check if any stop signs are detected
+    found_signs = bool(len(found) > 0)
+
+    return found_signs
+
+
 def main_loop():
     motor = Motor()
     try:
@@ -171,6 +196,12 @@ def main_loop():
                 image = capture()
                 offset = process_image_and_get_offset(image)
                 print("Adjusted Offset:", offset)
+                
+                found_signs = detect_stop_signs(image)
+                if found_signs:
+                    print("Stop sign detected.")
+                    motor.set_motor_model(0, 0, 0, 0)
+                    time.sleep(1)  # Wait for 1 second before resuming                
 
             print('Moving forward')
             motor.set_motor_model(500, 500, 500, 500)  # Proceed forward after adjustment

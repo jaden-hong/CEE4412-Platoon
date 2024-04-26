@@ -24,9 +24,9 @@ def region_selection_road(image):
 	# we have created this polygon in accordance to how the camera was placed
  
 	rows, cols = image.shape[:2]
-	bottom_left = [cols * 0.02, rows * 0.65]
+	bottom_left = [cols * 0.02, rows * 0.4]
 	top_left	 = [cols * 0.02, rows * 0.95]
-	bottom_right = [cols * 0.99, rows * 0.65]
+	bottom_right = [cols * 0.99, rows * 0.4]
 	top_right = [cols * 0.99, rows * 0.95]
  
  
