@@ -298,49 +298,52 @@ def detect_stop_signs(img):
     return result_rgb
 
 
+def main():
+    # Initialize video capture from webcam
+    cap = cv2.VideoCapture(0)
 
-# Initialize video capture from webcam
-cap = cv2.VideoCapture(0)
+    # Loop to continuously read frames from the webcam
+    while True:
+        # Capture frame-by-frame
+        start_time = time.time()
+        
+        ret, frame = cap.read()
+        
+        # Process the frame to detect lane lines
+        processed_frame = frame_processor(frame)
+        
+        # Apply region selection for objects
+        mask1 = region_selection_object(processed_frame)
+        
+        # Detect faces
+        face_detected_frame = detect_faces(mask1)
+        
+        # Detect stop signs
+        processed_frame = detect_stop_signs(face_detected_frame)
 
-# Loop to continuously read frames from the webcam
-while True:
-    # Capture frame-by-frame
-    start_time = time.time()
-    
-    ret, frame = cap.read()
-    
-    # Process the frame to detect lane lines
-    processed_frame = frame_processor(frame)
-    
-    # Apply region selection for objects
-    mask1 = region_selection_object(processed_frame)
-    
-    # Detect faces
-    face_detected_frame = detect_faces(mask1)
-    
-    # Detect stop signs
-    processed_frame = detect_stop_signs(face_detected_frame)
+        # Display the resulting frame
+        cv2.imshow('Frame', processed_frame)
+        
+        # Calculate the time taken to process the frame
+        time_taken = time.time() - start_time
+        
+        # Calculate the delay required to achieve the desired frame rate
+        delay = max(1.0 / 4 - time_taken, 0)
+        
+        # Wait for the calculated delay
+        time.sleep(delay)
 
-    # Display the resulting frame
-    cv2.imshow('Frame', processed_frame)
-    
-    # Calculate the time taken to process the frame
-    time_taken = time.time() - start_time
-    
-    # Calculate the delay required to achieve the desired frame rate
-    delay = max(1.0 / 4 - time_taken, 0)
-    
-    # Wait for the calculated delay
-    time.sleep(delay)
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        
+        if cv2.waitKey(1) & 0xFF == ord('c'):
+            cv2.imwrite('saved_frame.jpg', processed_frame)
+            print("Frame saved as saved_frame.jpg")
 
-    # Break the loop if 'q' is pressed
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-    
-    if cv2.waitKey(1) & 0xFF == ord('c'):
-        cv2.imwrite('saved_frame.jpg', processed_frame)
-        print("Frame saved as saved_frame.jpg")
+    # Release the capture
+    cap.release()
+    cv2.destroyAllWindows()
 
-# Release the capture
-cap.release()
-cv2.destroyAllWindows()
+if __name__== "__main__":
+     main()
