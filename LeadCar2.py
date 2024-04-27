@@ -55,20 +55,31 @@ class LeadCar2(BaseCar):
         self.conn_list[idx] = (conn,addr)
         print("Successfully connected to",self.fol_cars,"follow-cars")
     
-    def makeDecision(self):
+    def makeDecision(self,threshold=15):
         '''
         calculates and makes decision tuple
-        ([wheel1,2,3,4],led,buzzer)
+        (wheel1,2,3,4)
+        threshold in cm, how far away to stop car
         '''
         frontDistance = self.get_distance()
         self.calculateLMR
-
-
         frame = capture()
         
         #sending to lane track
         offset = process_image_and_get_offset(frame)
         print("Offset:", offset)
+
+        if frontDistance>threshold:
+            if offset>350:
+                movement = (2000, 2000, -1000, -1000)
+
+            elif offset<-350:
+                movement = (-1000, -1000, 2000, 2000)
+            else:
+                movement = (500, 500, 500, 500)
+        else:
+            movement = (0,0,0,0) #car stopped
+
 
         #sending to stop / face detection
         # processed_frame = frame_processor(frame)
@@ -85,16 +96,10 @@ class LeadCar2(BaseCar):
         # # Display the resulting frame
         # cv2.imshow('Frame', processed_frame)
         
-
-
-        result = ()
         #put result in queue for the # of fol cars + delay
-        self.queue.put(result)
+        for i in range(self.fol_cars):
+            self.queue.put(movement)
 
-
-
-        pass
-    
     def run(self):
         #set initial states
         self.pwm_S.setServoPwm('0',90) #starts looking straight first 
@@ -102,10 +107,9 @@ class LeadCar2(BaseCar):
         sf = 0.95 #the speed factor
         sleep = 0.3
         counter = 0
-        wait = 30
+        # wait = 30
 
         while True:
-            
             for thread in self.threadList:
                 thread.start()
                 thread.join()
@@ -113,10 +117,10 @@ class LeadCar2(BaseCar):
 
             #using khens function to get offset
 
-            self.makeDecision()
-
             print("getting movement")
-            movement = sQueue.get()
+            movement = self.makeDecision(threshold=threshold)
+            PWM.setMotorModel(movement)
+            # movement = sQueue.get()
 
             ## send message to following cars
             # self.network.sendInstruction()
