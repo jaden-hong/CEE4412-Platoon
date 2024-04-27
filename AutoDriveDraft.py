@@ -196,12 +196,7 @@ def main_loop():
                 image = capture()
                 offset = process_image_and_get_offset(image)
                 print("Adjusted Offset:", offset)
-                
-                found_signs = detect_stop_signs(image)
-                if found_signs:
-                    print("Stop sign detected.")
-                    motor.set_motor_model(0, 0, 0, 0)
-                    time.sleep(1)  # Wait for 1 second before resuming                
+                         
 
             print('Moving forward')
             motor.set_motor_model(500, 500, 500, 500)  # Proceed forward after adjustment
