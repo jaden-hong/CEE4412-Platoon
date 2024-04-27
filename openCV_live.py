@@ -24,10 +24,10 @@ def region_selection_road(image):
 	# we have created this polygon in accordance to how the camera was placed
  
 	rows, cols = image.shape[:2]
-	bottom_left = [cols * 0.02, rows * 0.95]
-	top_left	 = [cols * 0.3, rows * 0.55]
-	bottom_right = [cols * 0.98, rows * 0.95]
-	top_right = [cols * 0.7, rows * 0.55]
+	bottom_left = [cols * 0.02, rows * 0.4]
+	top_left	 = [cols * 0.02, rows * 0.95]
+	bottom_right = [cols * 0.99, rows * 0.4]
+	top_right = [cols * 0.99, rows * 0.95]
  
  
 	vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
@@ -37,31 +37,31 @@ def region_selection_road(image):
 	masked_image = cv2.bitwise_and(image, mask)
 	return masked_image
 
-def hough_transform(image):
-	"""
-	Determine and cut the region of interest in the input image.
-	Parameter:
-		image: grayscale image which should be an output from the edge detector
-	"""
-	# Distance resolution of the accumulator in pixels.
-	rho = 1			
+# def hough_transform(image):
+# 	"""
+# 	Determine and cut the region of interest in the input image.
+# 	Parameter:
+# 		image: grayscale image which should be an output from the edge detector
+# 	"""
+# 	# Distance resolution of the accumulator in pixels.
+# 	rho = 1			
  
-	# Angle resolution of the accumulator in radians.
-	theta = np.pi/360
+# 	# Angle resolution of the accumulator in radians.
+# 	theta = np.pi/360
  
-	# Only lines that are greater than threshold will be returned.
-	threshold = 180
+# 	# Only lines that are greater than threshold will be returned.
+# 	threshold = 180
  
-	# Line segments shorter than that are rejected.
-	minLineLength = 5
+# 	# Line segments shorter than that are rejected.
+# 	minLineLength = 5
  
-	# Maximum allowed gap between points on the same line to link them
-	maxLineGap = 10
+# 	# Maximum allowed gap between points on the same line to link them
+# 	maxLineGap = 10
  	
-	# function returns an array containing dimensions of straight lines 
-	# appearing in the input image
-	return cv2.HoughLinesP(image, rho = rho, theta = theta, threshold = threshold,
-						minLineLength = minLineLength, maxLineGap = maxLineGap)
+# 	# function returns an array containing dimensions of straight lines 
+# 	# appearing in the input image
+# 	return cv2.HoughLinesP(image, rho = rho, theta = theta, threshold = threshold,
+# 						minLineLength = minLineLength, maxLineGap = maxLineGap)
  
 def average_slope_intercept(lines):
     """
@@ -164,39 +164,38 @@ def frame_processor(image):
         image: image of a road where one wants to detect lane lines
         (we will be passing frames of video to this function)
     """
-    # convert the RGB image to Gray scale
+    # Convert the RGB image to grayscale
     grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # applying gaussian Blur which removes noise from the image 
-    # and focuses on our region of interest
-    # size of gaussian kernel
     
-    """
-    kernel_size = 5
-    # Applying gaussian blur to remove noise from the frames
-    blur = cv2.GaussianBlur(grayscale, (kernel_size, kernel_size), 0)
-    # first threshold for the hysteresis procedure
-    low_t = 50
-    # second threshold for the hysteresis procedure 
-    high_t = 150
-    # applying canny edge detection and save edges in a variable
-    edges = cv2.Canny(blur, low_t, high_t)
-    """
-    edges = cv2.Canny(grayscale, 50, 150)
+    # Apply Gaussian blur to remove noise from the frames
+    blur = cv2.GaussianBlur(grayscale, (5, 5), 0)
     
-    # since we are getting too many edges from our image, we apply 
-    # a mask polygon to only focus on the road
-    # Will explain Region selection in detail in further steps
-    region = region_selection_road(edges)
-    # Applying hough transform to get straight lines from our image 
-    # and find the lane lines
-    # Will explain Hough Transform in detail in further steps
-    hough = hough_transform(region)
-    #lastly we draw the lines on our resulting frame and return it as output 
-    result = draw_lane_lines(image, lane_lines(image, hough))
+    mask = region_selection_road(blur)
     
+    # Thresholding to ignore dark colors
+    _, thresholded = cv2.threshold(mask, 150, 255, cv2.THRESH_BINARY)
+
+    # Canny edge detection
+    edges = cv2.Canny(thresholded, 100, 200) 
     
+    # Region selection mask
+    mask = np.zeros_like(edges)
+    ignore_mask_color = 255
+    imshape = image.shape
+    vertices = np.array([[(0, imshape[0]), (imshape[1] / 2, imshape[0] / 2), (imshape[1], imshape[0])]], dtype=np.int32)
+    cv2.fillPoly(mask, vertices, ignore_mask_color)
+    masked_edges = cv2.bitwise_and(edges, mask)
+    
+    # Hough transform to detect lines
+    lines = cv2.HoughLinesP(masked_edges, 2, np.pi/180, 15, np.array([]), minLineLength=5, maxLineGap=20)
+    
+    # Draw the detected lines on the original image
+    result = draw_lane_lines(image, lane_lines(image, lines))
     result_rgb = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+    
     return result_rgb
+
+
 
 def region_selection_object(image):
 	"""
@@ -301,6 +300,8 @@ def detect_stop_signs(img):
 def main():
     # Initialize video capture from webcam
     cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     # Loop to continuously read frames from the webcam
     while True:

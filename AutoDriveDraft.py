@@ -75,10 +75,10 @@ def region_selection_road(image):
 	# we have created this polygon in accordance to how the camera was placed
  
 	rows, cols = image.shape[:2]
-	bottom_left = [cols * 0.02, rows * 0.95]
-	top_left	 = [cols * 0.3, rows * 0.55]
-	bottom_right = [cols * 0.98, rows * 0.95]
-	top_right = [cols * 0.7, rows * 0.55]
+	bottom_left = [cols * 0.02, rows * 0.65]
+	top_left	 = [cols * 0.02, rows * 0.95]
+	bottom_right = [cols * 0.99, rows * 0.65]
+	top_right = [cols * 0.99, rows * 0.95]
  
  
 	vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
@@ -89,13 +89,32 @@ def region_selection_road(image):
 	return masked_image
 
 def process_image_and_get_offset(image):
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_green = np.array([40, 40, 40])
-    upper_green = np.array([70, 255, 255])
-    mask = cv2.inRange(hsv, lower_green, upper_green)
-    mask = region_selection_road(mask)
-    edges = cv2.Canny(mask, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=150)
+    # Convert the RGB image to grayscale
+    grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # Apply Gaussian blur to remove noise from the frames
+    blur = cv2.GaussianBlur(grayscale, (5, 5), 0)
+    
+    mask = region_selection_road(blur)
+    
+    # Thresholding to ignore dark colors
+    _, thresholded = cv2.threshold(mask, 150, 255, cv2.THRESH_BINARY)
+
+    # Canny edge detection
+    edges = cv2.Canny(thresholded, 100, 200) 
+    
+    # Region selection mask
+    mask = np.zeros_like(edges)
+    ignore_mask_color = 255
+    imshape = image.shape
+    vertices = np.array([[(0, imshape[0]), (imshape[1] / 2, imshape[0] / 2), (imshape[1], imshape[0])]], dtype=np.int32)
+    cv2.fillPoly(mask, vertices, ignore_mask_color)
+    masked_edges = cv2.bitwise_and(edges, mask)
+    
+    # Hough transform to detect lines
+    lines = cv2.HoughLinesP(masked_edges, 2, np.pi/180, 15, np.array([]), minLineLength=5, maxLineGap=20)
+    
+    
     if lines is None:
         return None 
 
@@ -122,7 +141,34 @@ def process_image_and_get_offset(image):
     right_x1 = int((y1 - right_avg[1]) / right_avg[0])
     lane_center_x = (left_x1 + right_x1) / 2
     image_center_x = middle_x
+    
+    
     return int(lane_center_x - image_center_x)
+
+def detect_stop_signs(img):
+    """
+    Detects stop signs in the input image.
+    
+    Parameters:
+        img: Input image in BGR format.
+        
+    Returns:
+        found_signs: Boolean indicating whether stop signs are detected or not.
+    """
+    # Convert image to grayscale
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # Load stop sign classifier
+    stop_data = cv2.CascadeClassifier('stop_data.xml')
+
+    # Detect stop signs
+    found = stop_data.detectMultiScale(img_gray, minSize=(20, 20))
+
+    # Check if any stop signs are detected
+    found_signs = bool(len(found) > 0)
+
+    return found_signs
+
 
 def main_loop():
     motor = Motor()
@@ -132,32 +178,34 @@ def main_loop():
             offset = process_image_and_get_offset(image)
             print("Offset:", offset)
 
-            if offset is not None:
+            # Loop until the car is centered again between the desired offset bounds
+            while offset is not None and (offset > 350 or offset < -350):
                 if offset > 350:
                     print('Turning right')
-                    while offset > 350:
-                        motor.set_motor_model(2000, 2000, -1500, -1500)  # Turn right
-                        image = capture()
-                        offset = process_image_and_get_offset(image)
-                        print("Offset:", offset)
-                        time.sleep(0.25)
+                    motor.set_motor_model(2000, 2000, -1000, -1000)  # Turn right
 
                 elif offset < -350:
                     print('Turning left')
-                    while offset < -350:
-                        motor.set_motor_model(-1500, -1500, 2000, 2000)  # Turn left
-                        image = capture()
-                        offset = process_image_and_get_offset(image)
-                        print("Offset:", offset)
-                        time.sleep(0.25)
+                    motor.set_motor_model(-1000, -1000, 2000, 2000)  # Turn left
+
                 else:
                     print('Moving forward')
-                    motor.set_motor_model(500, 500, 500, 500)
-            else:
-                print('No lane detected, stopping')
-                motor.set_motor_model(0, 0, 0, 0)
+                    motor.set_motor_model(500, 500, 500, 500)  # Proceed forward after adjustment
 
-            time.sleep(0.5)  # You may adjust this delay as needed
+                time.sleep(0.25)  # Short delay to allow the vehicle to adjust before rechecking
+                image = capture()
+                offset = process_image_and_get_offset(image)
+                print("Adjusted Offset:", offset)
+                
+                found_signs = detect_stop_signs(image)
+                if found_signs:
+                    print("Stop sign detected.")
+                    motor.set_motor_model(0, 0, 0, 0)
+                    time.sleep(1)  # Wait for 1 second before resuming                
+
+            print('Moving forward')
+            motor.set_motor_model(500, 500, 500, 500)  # Proceed forward after adjustment
+            time.sleep(0.25)  # You may adjust this delay as needed
 
     except KeyboardInterrupt:
         motor.set_motor_model(0, 0, 0, 0)
