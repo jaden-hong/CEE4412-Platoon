@@ -334,15 +334,6 @@ def main():
         # Wait for the calculated delay
         time.sleep(delay)
 
-<<<<<<< Updated upstream
-        # Break the loop if 'q' is pressed
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        
-        if cv2.waitKey(1) & 0xFF == ord('c'):
-            cv2.imwrite('saved_frame.jpg', processed_frame)
-            print("Frame saved as saved_frame.jpg")
-=======
     # Display the resulting frame
     cv2.imshow('Frame', processed_frame)
     
@@ -354,7 +345,6 @@ def main():
     
     # Wait for the calculated delay
     time.sleep(delay)
->>>>>>> Stashed changes
 
     # Release the capture
     cap.release()
