@@ -48,7 +48,7 @@ def capture():
     try:
         picam2.start()
         # Give the camera a warm-up time
-        time.sleep(0.5) # 1/0.5 = 2 fps
+        time.sleep(0.25) # 1/0.25 = 2 fps
         buffer = picam2.capture_array("main")
         return cv2.cvtColor(buffer, cv2.COLOR_RGB2BGR)
     finally:

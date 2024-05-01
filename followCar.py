@@ -21,6 +21,7 @@ class FollowCar(BaseCar):
         self.sender = threading.Thread(target = self.sendLead)
         self.queue = queue.Queue()
         self.messageQueue = queue.Queue()
+        self.timeDelay = 0.25
 
     def exit(self):
         '''
@@ -32,50 +33,82 @@ class FollowCar(BaseCar):
         '''
         the receiving process for lead - follow pair
         '''
-        movement = self.socket.recv(4096000).decode()
-        #converting back to integer
-        int_movement = tuple(int(num) for num in movement.split(';'))
+        socket_lock = threading.Lock()
+        with socket_lock:
+            while(True):
+                movement = self.socket.recv(4096000).decode()
+                #converting back to integer
+                int_movement = tuple(int(num) for num in movement.split(';'))
 
-        self.queue.put(movement)
+                self.queue.put(int_movement)
     
     def sendLead(self):
         '''
         sending message to lead car ( whenever fol car has to stop)
         '''
-        
-        message = self.messageQueue.get()
-        print('sending message ',message,'to lead car!')
-        self.socket.send(message.encode())
+        socket_lock = threading.Lock()
+        with socket_lock:
+            while(True):
+                message = self.messageQueue.get()
+                print('sending message ',message,'to lead car!')
+                self.socket.send(message.encode())
 
     def run(self):
         print("Starting run loop")
-        threshold = 15
+        threshold = 10
         # changeMove = False
         movement = (0,0,0,0)
+        oldMovement = movement
         counter = 0
         frontDistance = self.get_distance()
         self.receiver.start()
         self.sender.start()
         # self.receiver.join()
+        ledbuzz(led,buzzer,'stop')
 
+
+        
         while True:
-            print("counter:",counter)
+            frontDistance = self.get_distance()
+            print("counter:",counter,"distance:",frontDistance)
             counter+=1
-            if frontDistance>threshold:
 
-                print('getting from queue')
+            if counter==2:
+                ledbuzz(led,buzzer,'end')
+            # print(frontDistance)
+            
+
+            if frontDistance>threshold:
+                # print('putting into message queue, "sync"')
+                self.messageQueue.put("sync")
+
+                # print('getting from queue')
+
+
+
                 movement = self.queue.get()
                 print("queue movement:",movement)
-                print('putting into message queue, "sync"')
-                self.messageQueue.put("sync")
+
             else: #something wrong on follow car side
                 movement = (0,0,0,0)
                 #two cases: 1 is ultrasonic sensor, 2 is pwm sensor, for now we only care for case 1
                 self.messageQueue.put("stop")
 
             print(movement)
-            print(*movement)
+
+            # whenever it goes from non sync to sync, it will need to be delayed by x seconds
+            # to accomodate
+            if oldMovement!=movement:
+                if movement[0] == 2000 and movement[0] == [-1000]: 
+                    #means a turn or stoptakes place need to pause for a bit then continue with movemnet
+                    print("SLEEPING_--------------------------------------------------")
+                    time.sleep(1.5)
+            
+
+            # print(*movement)
             PWM.setMotorModel(*movement)
+            time.sleep(self.timeDelay*2) #matching the fps of the car
+            oldMovement=movement
             #checking if collision / etc.
             
             # oldMovement = movement

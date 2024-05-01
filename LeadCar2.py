@@ -23,6 +23,7 @@ class LeadCar2(BaseCar):
         self.lead_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.lead_socket.bind((self.hostname,self.port))
         self.lead_socket.listen(fol_cars)
+        self.threadDelay = 0.25
         
 
     def exit(self):
@@ -56,11 +57,18 @@ class LeadCar2(BaseCar):
     def communicate(self,i): #will be run in thread
         #need to place all functions that wait on response from follow cars
         socket_lock = threading.Lock()
+        counter = 0
         with socket_lock: #to make sure only one socket accesses at a time
             while(True): #thread will keep running 
+                print("---THREAD---: looping",counter)
+                counter+=1
+                # print('___________________B4 movement______________')
                 movement = self.queue.get()
+
                 str_movement = tuple(str(num) for num in movement)
                 # converting to integer
+
+                # print('___________________B4 data______________')
                 data = ';'.join(str_movement).encode()
 
                 # print(self.conn_list[i],[0],self.conn_list[i][0])
@@ -68,16 +76,19 @@ class LeadCar2(BaseCar):
 
 
                 # for conn in self.conn_list:
-                print("receiving fol car #",i,", sync status")
+                # print("receiving fol car #",i,", sync status")
+                # print('___________________B4 recv______________')
                 data = self.conn_list[i][0].recv(4096000).decode() # will receive the movement commands
                 
                 # if self.in_sync == True: #none are out
-                print("data",data)
-                if data[0:3] == "stop": #
+                print("data:",data)
+                # print("data[0:4]",data[0:4])
+                if data[0:4] == "stop": #
                     print("follow car stopped!")
                     self.syncList[i] = False
                 else: #data would be "sync"
                     self.syncList[i] = True
+                # time.sleep(self.threadDelay)
                 # else:
 
 
@@ -94,7 +105,7 @@ class LeadCar2(BaseCar):
         self.conn_list[idx] = (conn,addr)
         print("Successfully connected to",self.fol_cars,"follow-cars")
     
-    def makeDecision(self,threshold=15):
+    def makeDecision(self,threshold=15): #oldMovement
         '''
         calculates and makes decision tuple
         (wheel1,2,3,4)
@@ -103,17 +114,17 @@ class LeadCar2(BaseCar):
         frontDistance = self.get_distance()
         self.calculateLMR
         frame = capture()
+
         
         #sending to lane track
         offset = process_image_and_get_offset(frame)
-        print("Offset:", offset)
+        
 
-        if offset==None:
+        if offset is None:
             offset=0
 
-        print("Front distance is:",frontDistance)
+        print("Offset:", offset,"Distance:",frontDistance,"q-size:",self.queue.qsize())
         if frontDistance>threshold:
-
             if offset>350:
                 movement = (2000, 2000, -1000, -1000)
 
@@ -123,6 +134,12 @@ class LeadCar2(BaseCar):
                 movement = (750, 750, 750, 750)
         else:
             movement = (0,0,0,0) #car stopped
+        
+        # if oldMovement!=movement:
+        #     #change! must delay all the follow cars so they keep running 
+        #     self.change = True
+        # else:
+        #     self.change = False
 
         
 
@@ -143,7 +160,8 @@ class LeadCar2(BaseCar):
         
         #put result in queue for the # of fol cars + delay
         # for i in range(self.fol_cars):
-        self.queue.put(movement)
+        # self.queue.put(movement)
+
 
         return movement
 
@@ -156,7 +174,8 @@ class LeadCar2(BaseCar):
         counter = 0
         # wait = 30
         sync = True
-
+        movement = (0,0,0,0) #default state
+        oldMovement = movement
         for thread in self.threadList:
             thread.start()
 
@@ -165,14 +184,15 @@ class LeadCar2(BaseCar):
             #     thread.start()
             # for thread in self.threadList:
             #     thread.join()
-            print("counter",counter)
-            counter+=1
+
 
             #using khens function to get offset
 
-            print("getting movement")
-            movement = self.makeDecision(threshold=threshold)
-            print("movement:",movement)
+            # print("getting movement")
+            
+            movement = self.makeDecision(threshold=threshold)#,oldMovement = oldMovement)
+            # oldMovement = movement
+            # print("movement:",movement)
 
             for s in self.syncList: #making sure all cars are in sync
                 if s==False:
@@ -185,8 +205,15 @@ class LeadCar2(BaseCar):
                 PWM.setMotorModel(*movement) #unpacking into args
             else:
                 PWM.setMotorModel(0,0,0,0) #case where car should stop since out of sync
-            print(sync,movement)
-            
+            print("C:",counter,"sync:",sync,"movement:",movement)
+            counter+=1
+
+            #putting into queue 
+            # if self.change and oldMovement == (0,0,0,0):
+            #     print("SLEEPING_--------------------------------------------------")
+            #     time.sleep(1.25)
+            self.queue.put(movement)
+
             # movement = sQueue.get()
 
             ## send message to following cars

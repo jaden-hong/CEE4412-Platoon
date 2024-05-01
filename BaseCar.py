@@ -101,7 +101,7 @@ def ledbuzz(led,buzzer,action,buzz='none',carType='none'):
 
         elif action == "stop":
             #runs when the car must stop
-            # buzzer.run('1')
+            buzzer.run('1')
             led.ledIndex(0x01,255,0,0)      #Red means stopped
             led.ledIndex(0x08,255,0,0)
             # print("OBJECT IN WAY / CAR STOPPED")
