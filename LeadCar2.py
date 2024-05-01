@@ -3,7 +3,7 @@ from Network import LeadModule
 from sharedQueue import sQueue #squeue used to access instructions
 import queue
 import threading
-from AutoDriveDraft import capture, region_selection_road, process_image_and_get_offset
+from AutoDriveDraft import * #capture, region_selection_road, process_image_and_get_offset
 from openCV_live import *
 
 class LeadCar2(BaseCar):
@@ -17,13 +17,24 @@ class LeadCar2(BaseCar):
         self.port=port
         
         self.queue = queue.Queue()
+        self.syncList = [None] #when all platoon cars are under same command
 
         self.lead_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # self.lead_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.lead_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.lead_socket.bind((self.hostname,self.port))
         self.lead_socket.listen(fol_cars)
+        
 
-    def connect(self):
+    def exit(self):
+        '''
+        incase of crash: to handle gracefully!
+        '''
+        self.lead_socket.close() #closing main socket
+        for c in self.conn_list:
+            c[0].close() #closing each lead-fol connection
+
+
+    def connect(self): 
         '''
         connects lead car to followCars
         '''
@@ -34,14 +45,42 @@ class LeadCar2(BaseCar):
          #number of follow cars
         for i in range(self.fol_cars): #connect cars
             print("car",i)
-            connector = threading.Thread(target = self.initConnect, args=(i,))
-            self.threadList.append(connector)
+            self.initConnect(i)
+            comms = threading.Thread(target = self.communicate, args=(i,))
+            self.threadList.append(comms)
             print("added to threadlist")
             #* need to implement: 
             # connector.start()
             # connector.join() #to make sure each thread finishes before proces
         
-        
+    def communicate(self,i): #will be run in thread
+        #need to place all functions that wait on response from follow cars
+        socket_lock = threading.Lock()
+        with socket_lock: #to make sure only one socket accesses at a time
+            while(True): #thread will keep running 
+                movement = self.queue.get()
+                str_movement = tuple(str(num) for num in movement)
+                # converting to integer
+                data = ';'.join(str_movement).encode()
+
+                # print(self.conn_list[i],[0],self.conn_list[i][0])
+                self.conn_list[i][0].send(data)
+
+
+                # for conn in self.conn_list:
+                print("receiving fol car #",i,", sync status")
+                data = self.conn_list[i][0].recv(4096000).decode() # will receive the movement commands
+                
+                # if self.in_sync == True: #none are out
+                print("data",data)
+                if data[0:3] == "stop": #
+                    print("follow car stopped!")
+                    self.syncList[i] = False
+                else: #data would be "sync"
+                    self.syncList[i] = True
+                # else:
+
+
 
     def initConnect(self,idx):
         '''
@@ -69,17 +108,23 @@ class LeadCar2(BaseCar):
         offset = process_image_and_get_offset(frame)
         print("Offset:", offset)
 
+        if offset==None:
+            offset=0
+
+        print("Front distance is:",frontDistance)
         if frontDistance>threshold:
+
             if offset>350:
                 movement = (2000, 2000, -1000, -1000)
 
             elif offset<-350:
                 movement = (-1000, -1000, 2000, 2000)
             else:
-                movement = (500, 500, 500, 500)
+                movement = (750, 750, 750, 750)
         else:
             movement = (0,0,0,0) #car stopped
 
+        
 
         #sending to stop / face detection
         # processed_frame = frame_processor(frame)
@@ -97,29 +142,51 @@ class LeadCar2(BaseCar):
         # cv2.imshow('Frame', processed_frame)
         
         #put result in queue for the # of fol cars + delay
-        for i in range(self.fol_cars):
-            self.queue.put(movement)
+        # for i in range(self.fol_cars):
+        self.queue.put(movement)
+
+        return movement
 
     def run(self):
         #set initial states
         self.pwm_S.setServoPwm('0',90) #starts looking straight first 
-        threshold = 15 #set to distance to emergency stop
+        threshold = 30 #set to distance to emergency stop
         sf = 0.95 #the speed factor
         sleep = 0.3
         counter = 0
         # wait = 30
+        sync = True
+
+        for thread in self.threadList:
+            thread.start()
 
         while True:
-            for thread in self.threadList:
-                thread.start()
-                thread.join()
+            # for thread in self.threadList:
+            #     thread.start()
+            # for thread in self.threadList:
+            #     thread.join()
             print("counter",counter)
+            counter+=1
 
             #using khens function to get offset
 
             print("getting movement")
             movement = self.makeDecision(threshold=threshold)
-            PWM.setMotorModel(movement)
+            print("movement:",movement)
+
+            for s in self.syncList: #making sure all cars are in sync
+                if s==False:
+                    sync = False
+                    break
+                else:
+                    sync = True
+            
+            if sync:
+                PWM.setMotorModel(*movement) #unpacking into args
+            else:
+                PWM.setMotorModel(0,0,0,0) #case where car should stop since out of sync
+            print(sync,movement)
+            
             # movement = sQueue.get()
 
             ## send message to following cars
@@ -140,6 +207,16 @@ if __name__ == '__main__':
         car.run()
         
     except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the child program  will be  executed.
+        print("\Interrupted!")
+
+    except Exception as e:
+        print("Error:",e)
+
+    finally:
         PWM.setMotorModel(0,0,0,0)
         ledbuzz(led,buzzer,'end')
-        print("issue! stopping")
+        car.exit()
+        picam2.close()
+        
+
+        
