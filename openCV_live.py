@@ -268,6 +268,7 @@ def detect_stop_signs(img):
         
     Returns:
         img_rgb: Image with rectangles drawn around detected stop signs in RGB format.
+        found_signs: Boolean indicating whether stop signs are detected or not.
     """
     # Convert image to grayscale
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -280,21 +281,29 @@ def detect_stop_signs(img):
 
     # Detect stop signs
     found = stop_data.detectMultiScale(img_gray, minSize=(20, 20))
+    
+    total_area = img_rgb.shape[0] * img_rgb.shape[1]
+    
+    # Initialize a variable to track if any stop sign's area is greater than one-fourth of the capture size
+    any_large_sign = False
 
     try:
         # Draw rectangles around detected stop signs
         for (x, y, width, height) in found:
             cv2.rectangle(img_rgb, (x, y), (x + height, y + width), (0, 255, 0), 5)
+            # Calculate the area of the rectangle
+            sign_area = width * height
+            # Check if the area is greater than one-fourth of the capture size
+            if sign_area > total_area / 16:
+                any_large_sign = True
     except OverflowError as e:
         print("OverflowError:", e)
         # Return the original image without drawing rectangles
-        
-        
-        return img_rgb
+        return img_rgb, False
 
-    result_rgb = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2RGB)
+    # Return the result image and whether any large stop sign was detected
+    return img_rgb, any_large_sign
 
-    return result_rgb
 
 
 def main():
@@ -320,7 +329,9 @@ def main():
         face_detected_frame = detect_faces(mask1)
         
         # Detect stop signs
-        processed_frame = detect_stop_signs(face_detected_frame)
+        processed_frame, found_signs = detect_stop_signs(face_detected_frame)
+        
+        print(found_signs)
 
         # Display the resulting frame
         cv2.imshow('Frame', processed_frame)
@@ -334,17 +345,13 @@ def main():
         # Wait for the calculated delay
         time.sleep(delay)
 
-    # Display the resulting frame
-    cv2.imshow('Frame', processed_frame)
-    
-    # Calculate the time taken to process the frame
-    time_taken = time.time() - start_time
-    
-    # Calculate the delay required to achieve the desired frame rate
-    delay = max(1.0 / 30 - time_taken, 0)
-    
-    # Wait for the calculated delay
-    time.sleep(delay)
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        
+        if cv2.waitKey(1) & 0xFF == ord('c'):
+            cv2.imwrite('saved_frame.jpg', processed_frame)
+            print("Frame saved as saved_frame.jpg")
 
     # Release the capture
     cap.release()
