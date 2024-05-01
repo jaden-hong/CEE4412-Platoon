@@ -145,29 +145,75 @@ def process_image_and_get_offset(image):
     
     return int(lane_center_x - image_center_x)
 
+def detect_faces(image):
+    """
+    Detect faces in the input image and draw rectangles around them.
+    
+    Parameters:
+        image: Input image in BGR format.
+        
+    Returns:
+        found_faces: Boolean indicating whether faces are detected or not.
+    """
+    # Load the cascade
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    
+    # Convert the image to grayscale for face detection
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Detect faces
+    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+
+    # Check if any faces are detected
+    found_faces = bool(len(faces) > 0)
+
+    return found_faces
+
+
 def detect_stop_signs(img):
     """
-    Detects stop signs in the input image.
+    Detects stop signs in the input image and draws rectangles around them.
     
     Parameters:
         img: Input image in BGR format.
         
     Returns:
+        img_rgb: Image with rectangles drawn around detected stop signs in RGB format.
         found_signs: Boolean indicating whether stop signs are detected or not.
     """
     # Convert image to grayscale
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # Convert image to RGB format
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
     # Load stop sign classifier
     stop_data = cv2.CascadeClassifier('stop_data.xml')
 
     # Detect stop signs
     found = stop_data.detectMultiScale(img_gray, minSize=(20, 20))
+    
+    total_area = img_rgb.shape[0] * img_rgb.shape[1]
+    
+    # Initialize a variable to track if any stop sign's area is greater than one-fourth of the capture size
+    any_large_sign = False
 
-    # Check if any stop signs are detected
-    found_signs = bool(len(found) > 0)
+    try:
+        # Draw rectangles around detected stop signs
+        for (x, y, width, height) in found:
+            cv2.rectangle(img_rgb, (x, y), (x + height, y + width), (0, 255, 0), 5)
+            # Calculate the area of the rectangle
+            sign_area = width * height
+            # Check if the area is greater than one-fourth of the capture size
+            if sign_area > total_area / 16:
+                any_large_sign = True
+    except OverflowError as e:
+        print("OverflowError:", e)
+        # Return the original image without drawing rectangles
+        return img_rgb, False
 
-    return found_signs
+    # Return the result image and whether any large stop sign was detected
+    return any_large_sign
 
 
 def main_loop():
@@ -199,13 +245,19 @@ def main_loop():
 
             print('Moving forward')
             motor.set_motor_model(500, 500, 500, 500)  # Proceed forward after adjustment
-            time.sleep(0.25)  # You may adjust this delay as needed
+            time.sleep(0.25) 
 
             found_signs = detect_stop_signs(image)
             if found_signs:
                 print("Stop sign detected.")
                 motor.set_motor_model(0, 0, 0, 0)
                 # time.sleep(1)  # Wait for 1 second before resuming   
+                
+            found_faces = detect_faces(image)
+            if found_faces:
+                print("Face detected.")
+                motor.set_motor_model(0, 0, 0, 0)
+                # time.sleep(1)  # Wait for 1 second before resuming
 
     except KeyboardInterrupt:
         motor.set_motor_model(0, 0, 0, 0)
@@ -213,4 +265,3 @@ def main_loop():
 
 if __name__ == "__main__":
     main_loop()
-    ddd
