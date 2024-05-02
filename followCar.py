@@ -55,7 +55,7 @@ class FollowCar(BaseCar):
 
     def run(self):
         print("Starting run loop")
-        threshold = 10
+        threshold = 5
         # changeMove = False
         movement = (0,0,0,0)
         oldMovement = movement
@@ -99,7 +99,7 @@ class FollowCar(BaseCar):
             # whenever it goes from non sync to sync, it will need to be delayed by x seconds
             # to accomodate
             if oldMovement!=movement:
-                if movement[0] == 2000 and movement[0] == [-1000]: 
+                if movement[0] == 2000 or movement[0] == [-1000]: 
                     #means a turn or stoptakes place need to pause for a bit then continue with movemnet
                     print("SLEEPING_--------------------------------------------------")
                     time.sleep(1.5)
@@ -107,7 +107,7 @@ class FollowCar(BaseCar):
 
             # print(*movement)
             PWM.setMotorModel(*movement)
-            time.sleep(self.timeDelay*2) #matching the fps of the car
+            time.sleep(self.timeDelay*2.3) #matching the fps of the car
             oldMovement=movement
             #checking if collision / etc.
             

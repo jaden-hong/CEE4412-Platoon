@@ -5,6 +5,7 @@ import queue
 import threading
 from AutoDriveDraft import * #capture, region_selection_road, process_image_and_get_offset
 from openCV_live import *
+from EdmundStop import detect_faces, detect_stop_signs
 
 class LeadCar2(BaseCar):
     def __init__(self,fol_cars, port = 5000):
@@ -105,7 +106,7 @@ class LeadCar2(BaseCar):
         self.conn_list[idx] = (conn,addr)
         print("Successfully connected to",self.fol_cars,"follow-cars")
     
-    def makeDecision(self,threshold=15): #oldMovement
+    def makeDecision(self,stopped,threshold=15): #oldMovement
         '''
         calculates and makes decision tuple
         (wheel1,2,3,4)
@@ -116,66 +117,52 @@ class LeadCar2(BaseCar):
         frame = capture()
 
         
-        #sending to lane track
+        stopSign = detect_stop_signs(frame)
+        # faces = detect_faces(frame)
+
         offset = process_image_and_get_offset(frame)
         
-
+    
         if offset is None:
             offset=0
 
         print("Offset:", offset,"Distance:",frontDistance,"q-size:",self.queue.qsize())
-        if frontDistance>threshold:
-            if offset>350:
-                movement = (2000, 2000, -1000, -1000)
-
-            elif offset<-350:
-                movement = (-1000, -1000, 2000, 2000)
-            else:
-                movement = (750, 750, 750, 750)
+        # if faces == False:
+        #     print("Face detected!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        #     movement = (0,0,0,0)
+        #     stopped = True
+        if stopSign and stopped == False:
+            print("Stop sign detected!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            movement = (0,0,0,0)
+            stopped = True
         else:
-            movement = (0,0,0,0) #car stopped
-        
-        # if oldMovement!=movement:
-        #     #change! must delay all the follow cars so they keep running 
-        #     self.change = True
-        # else:
-        #     self.change = False
+            if frontDistance>threshold:
+                if offset>350:
+                    movement = (2000, 2000, -1000, -1000)
 
-        
+                elif offset<-350:
+                    movement = (-1000, -1000, 2000, 2000)
+                else:
+                    movement = (700, 700, 700, 700)
+            else:
+                movement = (0,0,0,0) #car stopped
 
-        #sending to stop / face detection
-        # processed_frame = frame_processor(frame)
-    
-        # # Apply region selection for objects
-        # mask1 = region_selection_object(processed_frame)
-        
-        # # Detect faces
-        # face_detected_frame = detect_faces(mask1)
-        
-        # # Detect stop signs
-        # processed_frame = detect_stop_signs(face_detected_frame)
-
-        # # Display the resulting frame
-        # cv2.imshow('Frame', processed_frame)
-        
-        #put result in queue for the # of fol cars + delay
-        # for i in range(self.fol_cars):
-        # self.queue.put(movement)
-
-
-        return movement
+        return movement, stopped
 
     def run(self):
         #set initial states
         self.pwm_S.setServoPwm('0',90) #starts looking straight first 
-        threshold = 30 #set to distance to emergency stop
+        threshold = 15 #set to distance to emergency stop
         sf = 0.95 #the speed factor
         sleep = 0.3
         counter = 0
         # wait = 30
         sync = True
         movement = (0,0,0,0) #default state
-        oldMovement = movement
+        # oldMovement = movement
+
+        stopped = False
+        # for first time it sees it, it must stop
         for thread in self.threadList:
             thread.start()
 
@@ -190,10 +177,10 @@ class LeadCar2(BaseCar):
 
             # print("getting movement")
             
-            movement = self.makeDecision(threshold=threshold)#,oldMovement = oldMovement)
+            movement, stopped = self.makeDecision(stopped,threshold=threshold)#,oldMovement = oldMovement)
             # oldMovement = movement
             # print("movement:",movement)
-
+    
             for s in self.syncList: #making sure all cars are in sync
                 if s==False:
                     sync = False
@@ -204,6 +191,7 @@ class LeadCar2(BaseCar):
             if sync:
                 PWM.setMotorModel(*movement) #unpacking into args
             else:
+                # PWM.setMotorModel(*movement) #unpacking into args
                 PWM.setMotorModel(0,0,0,0) #case where car should stop since out of sync
             print("C:",counter,"sync:",sync,"movement:",movement)
             counter+=1

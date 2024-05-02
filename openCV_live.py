@@ -243,7 +243,7 @@ def detect_faces(image):
         image_with_faces: Image with rectangles drawn around detected faces.
     """
     # Load the cascade
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
     
     # Convert the image to grayscale for face detection
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

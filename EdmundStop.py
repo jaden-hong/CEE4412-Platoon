@@ -40,9 +40,9 @@ class Motor:
         self.pwm.setMotorPwm(5, max(0, duty))
         self.pwm.setMotorPwm(4, max(0, -duty))
 
-picam2 = Picamera2()  # Create a single camera instance outside the function
-config = picam2.create_still_configuration(main={"size": (640, 480)})
-picam2.configure(config)
+# picam2 = Picamera2()  # Create a single camera instance outside the function
+# config = picam2.create_still_configuration(main={"size": (640, 480)})
+# picam2.configure(config)
 
 def capture():
     try:
@@ -156,7 +156,7 @@ def detect_faces(image):
         found_faces: Boolean indicating whether faces are detected or not.
     """
     # Load the cascade
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
     
     # Convert the image to grayscale for face detection
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
